@@ -210,7 +210,7 @@ Baseline agent: `gpt-4o-mini` with heuristic fallback
 | Variable | Description |
 |----------|-------------|
 | `API_BASE_URL` | LLM API endpoint (e.g. `https://api.openai.com/v1`) |
-| `MODEL_NAME` | Model identifier (e.g. `gpt-4o-mini`) |
+| `MODEL_NAME` | Model identifier (e.g. `'Qwen/Qwen2.5-7B-Instruct`) |
 | `HF_TOKEN` | Your Hugging Face / API key |
 | `ENV_BASE_URL` | Environment server URL (default: `http://localhost:7860`) |
 
