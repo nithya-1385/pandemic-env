@@ -1,0 +1,86 @@
+name: pandemic-response-v1
+version: "1.0.0"
+description: >
+  A real-world pandemic response simulation where an AI agent must allocate
+  vaccines, enforce lockdowns, and distribute healthcare resources across
+  a network of cities to contain disease spread and minimize deaths.
+  Models genuine public-health decision-making under resource constraints.
+
+author: pandemic-response-team
+tags:
+  - openenv
+  - healthcare
+  - resource-allocation
+  - pandemic
+  - real-world
+
+observation_space:
+  type: object
+  description: Current simulation state including city infection levels, resources, and day count
+  fields:
+    day: "Current simulation day (int)"
+    max_days: "Episode length (int)"
+    total_resources: "Global resource pool (float)"
+    vaccines_available: "Remaining vaccine doses (int)"
+    cities: "List of city observations with infection, vaccination, lockdown status"
+    done: "Whether episode has ended (bool)"
+    action_feedback: "Human-readable feedback from last action (str)"
+    task_description: "Description of the current task goal (str)"
+
+action_space:
+  type: object
+  description: Intervention actions the agent can take each day
+  actions:
+    allocate_vaccines:
+      description: Send vaccine doses to a city
+      params: [city_index (int), doses (int)]
+    set_lockdown:
+      description: Enable or disable lockdown in a city
+      params: [city_index (int), enabled (bool)]
+    send_resources:
+      description: Send resource units to boost a city's healthcare capacity
+      params: [city_index (int), amount (float)]
+    no_op:
+      description: Take no action this step
+      params: []
+
+reward:
+  type: float
+  range: [-1.0, 2.0]
+  description: >
+    Dense reward signal. Positive for reducing infections and increasing vaccination.
+    Negative for deaths and resource depletion. Provides partial progress throughout episode.
+
+tasks:
+  - id: task_1_easy
+    name: Single City Outbreak Control
+    difficulty: easy
+    max_steps: 30
+    success_threshold: 0.6
+    description: Contain a mild outbreak in one city with abundant resources
+
+  - id: task_2_medium
+    name: Multi-City Epidemic Management
+    difficulty: medium
+    max_steps: 40
+    success_threshold: 0.65
+    description: Manage epidemic spread across 3 connected cities with moderate resources
+
+  - id: task_3_hard
+    name: National Pandemic Crisis
+    difficulty: hard
+    max_steps: 50
+    success_threshold: 0.5
+    description: Prevent systemic collapse across 5 cities with critically scarce resources
+
+endpoints:
+  reset: POST /reset
+  step: POST /step
+  state: GET /state
+  tasks: GET /tasks
+  health: GET /health
+  grade: GET /grade
+
+docker:
+  port: 7860
+  health_check: GET /health
