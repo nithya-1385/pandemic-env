@@ -68,6 +68,20 @@ class StateResponse(BaseModel):
     step_count: int
     total_reward: float
 
+@app.get("/")
+def root():
+    return {
+        "message": "Pandemic Response API is running",
+        "endpoints": [
+            "/health",
+            "/tasks",
+            "/reset",
+            "/step",
+            "/state",
+            "/grade"
+        ]
+    }
+
 @app.get("/health")
 def health():
     return {"status": "ok", "env": "pandemic-response-v1"}
