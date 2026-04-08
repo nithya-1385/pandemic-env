@@ -22,31 +22,22 @@ BENCHMARK="pandemic-response-v1"
 TASKS=["task_1_easy","task_2_medium","task_3_hard"]
 
 def log_start(task: str, env: str, model: str):
-    print(json.dumps({
-        "type":"START",
-        "task":task,
-        "env":env,
-        "model":model,
-    }), flush=True)
+    print(f"[START] task={task} env={env} model={model}", flush=True)
 
 def log_step(step: int, action: Any, reward: float, done: bool, error: Optional[str]):
-    print(json.dumps({
-        "type":"STEP",
-        "step":step,
-        "action":action,
-        "reward":reward,
-        "done":done,
-        "error":error,
-    }), flush=True)
+    error_val=error if error else "null"
+    done_val=str(done).lower()
+    print(
+        f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}",
+        flush=True
+    )
 
 def log_end(success: bool, steps: int, score: float, rewards: List[float]):
-    print(json.dumps({
-        "type":"END",
-        "success":success,
-        "steps":steps,
-        "score":score,
-        "rewards":rewards,
-    }), flush=True)
+    rewards_str=",".join(f"{r:.2f}" for r in rewards)
+    print(
+        f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}",
+        flush=True
+    )
 
 #HTTP env
 def env_reset(task_id: str, seed: int=42)->Dict:
