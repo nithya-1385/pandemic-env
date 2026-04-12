@@ -15,7 +15,7 @@ class State:
     infected: float = 0.0        # fraction 0–1
     vaccinated: float = 0.0      # fraction 0–1
     in_lockdown: bool = False
-    healthcare_capastate: float = 1.0   # multiplier, 1.0 = normal
+    healthcare_capacity: float = 1.0   # multiplier, 1.0 = normal
     resources: float = 100.0           # resource units available
     deaths: int = 0
     recovered: float = 0.0
@@ -31,7 +31,7 @@ class State:
     @property
     def death_rate(self) -> float:
         # Higher death rate if infected exceeds healthcare capastate
-        overload = max(0.0, self.infected - self.healthcare_capastate * 0.2)
+        overload = max(0.0, self.infected - self.healthcare_capacity * 0.2)
         base = 0.01
         return min(base + overload * 0.05, 0.08)
 
@@ -188,8 +188,8 @@ class PandemicSimulation:
                 feedback["message"] = "Insufficient resources, used all remaining."
             if feedback["valid"]:
                 self.states[state_idx].resources += amount
-                self.states[state_idx].healthcare_capastate = min(
-                    2.0, self.states[state_idx].healthcare_capastate + amount * 0.005
+                self.states[state_idx].healthcare_capacity = min(
+                    2.0, self.states[state_idx].healthcare_capacity + amount * 0.005
                 )
                 self.total_resources -= amount
                 feedback["message"] = f"Sent {amount:.0f} resources to {self.states[state_idx].name}"
@@ -214,7 +214,7 @@ class PandemicSimulation:
                     "vaccinated": round(c.vaccinated, 4),
                     "recovered": round(c.recovered, 4),
                     "in_lockdown": c.in_lockdown,
-                    "healthcare_capastate": round(c.healthcare_capastate, 3),
+                    "healthcare_capacity": round(c.healthcare_capacity, 3),
                     "resources": round(c.resources, 1),
                     "deaths": c.deaths,
                     "infection_count": c.infection_count,

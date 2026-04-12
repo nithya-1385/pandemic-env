@@ -31,18 +31,19 @@ _step_count: int=0
 
 
 def _sim_to_observation(sim: PandemicSimulation, feedback: str="", done: bool=False) -> PandemicObservation:
-    snap=sim.get_state_snapshot()
-    states_obs=[StateObservation(**c) for c in snap["states"]]
-    task=TASKS[_current_task_id]
+    snap = sim.history[-1] if sim.history else sim.get_state_snapshot()
+
+    states_obs = [StateObservation(**c) for c in snap["states"]]
+
     return PandemicObservation(
         day=snap["day"],
         max_days=sim.max_days,
         total_resources=snap["total_resources"],
         vaccines_available=snap["vaccines_available"],
         states=states_obs,
-        done=done,
-        action_feedback=feedback,
-        task_description=task["description"],
+        done=snap.get("done", done),
+        action_feedback=snap.get("action_feedback", feedback),
+        task_description=snap.get("task_description", ""),
     )
 
 class ResetRequest(BaseModel):
@@ -100,7 +101,7 @@ def reset(req: ResetRequest=ResetRequest()):
     difficulty=task["difficulty"]
     _current_task_id=task_id
     _sim=PandemicSimulation(seed=req.seed or 42, difficulty=difficulty)
-    _prev_snapshot=_sim.get_state_snapshot()
+    _prev_snapshot=_sim.step_simulation({"message": "Environment reset"})
     _total_reward=0.0
     _step_count=0
     obs=_sim_to_observation(_sim, feedback="Environment reset. Ready.", done=False)
@@ -126,7 +127,7 @@ def step(req: StepRequest):
     feedback_dict=_sim.apply_action(action_dict)
     # Advance simulation by one day
     prev_snap=_sim.get_state_snapshot()
-    _sim.step_simulation()
+    _sim.step_simulation(feedback_dict)
     _step_count+=1
     # Compute reward
     reward=_sim.compute_reward(prev_snap, feedback_dict)

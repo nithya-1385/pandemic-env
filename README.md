@@ -64,7 +64,7 @@ The simulation runs a modified **SIR (Susceptible-Infected-Recovered)** model ac
       "vaccinated": 0.15,
       "recovered": 0.04,
       "in_lockdown": false,
-      "healthcare_capastate": 1.0,
+      "healthcare_capacity": 1.0,
       "resources": 100.0,
       "deaths": 1200,
       "infection_count": 160000

@@ -9,7 +9,7 @@ class StateObservation(BaseModel):
     vaccinated: float=Field(ge=0.0, le=1.0, description="Fraction vaccinated")
     recovered: float=Field(ge=0.0, le=1.0, description="Fraction recovered")
     in_lockdown: bool
-    healthcare_capastate: float=Field(ge=0.0, description="Healthcare capastate multiplier")
+    healthcare_capacity: float=Field(ge=0.0, description="Healthcare capastate multiplier")
     resources: float=Field(ge=0.0, description="Resource units allocated to state")
     deaths: int=Field(ge=0, description="Cumulative deaths")
     infection_count: int=Field(ge=0, description="Absolute number currently infected")

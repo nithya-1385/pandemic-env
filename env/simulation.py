@@ -12,7 +12,7 @@ class State:
     infected: float=0.0
     vaccinated: float=0.0
     in_lockdown: bool=False
-    healthcare_capastate: float=1.0
+    healthcare_capacity: float=1.0
     resources: float=100.0
     deaths: int=0
     recovered: float=0.0
@@ -25,7 +25,7 @@ class State:
     @property
     def death_rate(self)->float:
         # Higher death rate if infected exceeds healthcare capastate
-        overload=max(0.0, self.infected-self.healthcare_capastate*0.2)
+        overload=max(0.0, self.infected-self.healthcare_capacity*0.2)
         base=0.01
         return min(base+overload*0.05, 0.08)
 
@@ -113,12 +113,22 @@ class PandemicSimulation:
             state.infected=min(1.0, max(0.0, state.infected+delta-deaths_today-recovered_today))
             state.recovered=min(1.0, state.recovered+recovered_today)
 
-    def step_simulation(self):
+    def step_simulation(self, action_feedback: Optional[dict] = None):
         self._spread()
         self.day+=1
         snapshot=self.get_state_snapshot()
+        snapshot["action_feedback"]=action_feedback["message"] if action_feedback else ""
+        snapshot["task_description"]=self._get_task_description()
         self.history.append(snapshot)
         return snapshot
+    
+    def _get_task_description(self) -> str:
+        if self.difficulty == "easy":
+            return "Control outbreak in 2 states with high resources."
+        elif self.difficulty == "medium":
+            return "Manage spread across 3 states with moderate resources."
+        else:
+            return "Control severe outbreak across 5 states with limited resources."
 
     def apply_action(self, action: dict)->dict:
         """
@@ -166,7 +176,7 @@ class PandemicSimulation:
                 feedback["message"]="Insufficient resources, used all remaining."
             if feedback["valid"]:
                 self.states[state_idx].resources+=amount
-                self.states[state_idx].healthcare_capastate=min(2.0, self.states[state_idx].healthcare_capastate+amount*0.005)
+                self.states[state_idx].healthcare_capacity=min(2.0, self.states[state_idx].healthcare_capacity+amount*0.005)
                 self.total_resources-=amount
                 feedback["message"]=f"Sent {amount:.0f} resources to {self.states[state_idx].name}"
         elif action_type=="no_op":
@@ -178,6 +188,8 @@ class PandemicSimulation:
     def get_state_snapshot(self)->dict:
         return {
             "day": self.day,
+            "max_days": self.max_days,
+            "done": self.is_done(),
             "total_resources": self.total_resources,
             "vaccines_available": self.vaccines_available,
             "states": [
@@ -188,7 +200,7 @@ class PandemicSimulation:
                     "vaccinated": round(c.vaccinated, 4),
                     "recovered": round(c.recovered, 4),
                     "in_lockdown": c.in_lockdown,
-                    "healthcare_capastate": round(c.healthcare_capastate, 3),
+                    "healthcare_capacity": round(c.healthcare_capacity, 3),
                     "resources": round(c.resources, 1),
                     "deaths": c.deaths,
                     "infection_count": c.infection_count,

@@ -5,6 +5,7 @@ import asyncio
 import requests
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
+import random
 
 #Config
 API_BASE_URL=os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
@@ -15,8 +16,8 @@ ENV_BASE_URL=os.getenv("ENV_BASE_URL", "http://localhost:7860")
 MAX_STEPS=30
 MAX_TOTAL_REWARD=20.0
 SUCCESS_THRESHOLD=0.5
-TEMPERATURE=0.2
-MAX_TOKENS=512
+TEMPERATURE=0.5
+MAX_TOKENS=256
 BENCHMARK="pandemic-response-v1"
 
 TASKS=["task_1_easy","task_2_medium","task_3_hard"]
@@ -40,8 +41,9 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]):
     )
 
 #HTTP env
-def env_reset(task_id: str, seed: int=42)->Dict:
-    r=requests.post(f"{ENV_BASE_URL}/reset", json={"task_id": task_id, "seed": seed}, timeout=30)
+def env_reset(task_id: str, seed: int = 42) -> Dict:
+    seed = random.randint(0, 100000)
+    r = requests.post(f"{ENV_BASE_URL}/reset",json={"task_id": task_id, "seed": seed},timeout=30)
     r.raise_for_status()
     return r.json()
 
@@ -104,39 +106,63 @@ Recent actions:
 Choose your action for today:"""
 
 def get_agent_action(client: OpenAI, obs: Dict, step: int, last_reward: float, history: List[str]) -> Dict:
-    prompt=build_prompt(obs, step, last_reward, history)
-    try:
-        completion=client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": prompt},],
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-        )
-        text=(completion.choices[0].message.content or "").strip()
-        text=text.replace("```json", "").replace("```", "").strip()
-        action=json.loads(text)
-        return action
-    except Exception as e:
-        print(f"[DEBUG] Agent parse error: {e}", flush=True)
-        #Fallback if model fails
-        return _heuristic_action(obs)
+    prompt = build_prompt(obs, step, last_reward, history)
+
+    for _ in range(3):  # retry 3 times
+        try:
+            completion = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=TEMPERATURE,
+                max_tokens=MAX_TOKENS,
+            )
+
+            text = (completion.choices[0].message.content or "").strip()
+            text = text.replace("```json", "").replace("```", "").strip()
+
+            return json.loads(text)
+
+        except Exception as e:
+            print(f"[DEBUG] retrying model call: {e}", flush=True)
+            time.sleep(1)
+
+    return _heuristic_action(obs)
 
 #Simple fallback: vaccinate the most infected state.
-def _heuristic_action(obs: Dict)->Dict:
-    states=obs.get("states", [])
+def _heuristic_action(obs: Dict) -> Dict:
+    states = obs.get("states", [])
     if not states:
         return {"action_type": "no_op"}
-    most_infected=max(range(len(states)), key=lambda i: states[i]["infected"])
-    vaccines=obs.get("vaccines_available", 0)
-    if vaccines > 10000:
-        return {"action_type": "allocate_vaccines", "state_index": most_infected, "doses": min(50000, vaccines)}
-    resources=obs.get("total_resources", 0)
-    if resources > 20:
-        return {"action_type": "send_resources", "state_index": most_infected, "amount": min(30.0, resources)}
+
+    most_infected = max(range(len(states)), key=lambda i: states[i]["infected"])
+    vaccines = obs.get("vaccines_available", 0)
+    resources = obs.get("total_resources", 0)
+
+    # --- RANDOMNESS ADDED ---
+    if vaccines > 10000 and random.random() < 0.7:
+        return {
+            "action_type": "allocate_vaccines",
+            "state_index": most_infected,
+            "doses": random.choice([20000, 30000, 50000])
+        }
+
+    if resources > 20 and random.random() < 0.6:
+        return {
+            "action_type": "send_resources",
+            "state_index": most_infected,
+            "amount": random.choice([20.0, 30.0, 50.0])
+        }
+
     if states[most_infected]["infected"] > 0.10 and not states[most_infected]["in_lockdown"]:
-        return {"action_type": "set_lockdown", "state_index": most_infected, "enabled": True}
+        return {
+            "action_type": "set_lockdown",
+            "state_index": most_infected,
+            "enabled": True
+        }
+
     return {"action_type": "no_op"}
 
 
