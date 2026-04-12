@@ -94,17 +94,18 @@ def list_tasks():
 @app.post("/reset", response_model=ResetResponse)
 def reset(req: ResetRequest=ResetRequest()):
     global _sim, _current_task_id, _prev_snapshot, _total_reward, _step_count
-    task_id=req.task_id or "task_1_easy"
+    task_id = req.task_id or "task_1_easy"
     if task_id not in TASKS:
-        raise HTTPException(status_code=400, detail=f"Unknown task_id: {task_id}. Valid: {list(TASKS.keys())}")
-    task=TASKS[task_id]
-    difficulty=task["difficulty"]
-    _current_task_id=task_id
-    _sim=PandemicSimulation(seed=req.seed or 42, difficulty=difficulty)
-    _prev_snapshot=_sim.step_simulation({"message": "Environment reset"})
-    _total_reward=0.0
-    _step_count=0
-    obs=_sim_to_observation(_sim, feedback="Environment reset. Ready.", done=False)
+        raise HTTPException(status_code=400, detail=f"Unknown task_id: {task_id}")
+    task = TASKS[task_id]
+    difficulty = task["difficulty"]
+    _current_task_id = task_id
+    _sim = PandemicSimulation(seed=req.seed or 42, difficulty=difficulty)
+    _prev_snapshot = _sim.get_state_snapshot()
+    _sim.history.append({**_prev_snapshot,"action_feedback": "Environment reset","task_description": _sim._get_task_description()})
+    _total_reward = 0.0
+    _step_count = 0
+    obs = _sim_to_observation(_sim, feedback="Environment reset. Ready.", done=False)
     return ResetResponse(observation=obs, task=task)
 
 @app.post("/step", response_model=StepResponse)
