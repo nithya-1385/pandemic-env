@@ -105,10 +105,11 @@ Recent actions:
 
 Choose your action for today:"""
 
-def get_agent_action(client: OpenAI, obs: Dict, step: int, last_reward: float, history: List[str]) -> Dict:
+def get_agent_action(client, obs: Dict, step: int, last_reward: float, history: List[str]) -> Dict:
+    if client is None:
+        return _heuristic_action(obs)
     prompt = build_prompt(obs, step, last_reward, history)
-
-    for _ in range(3):  # retry 3 times
+    for _ in range(3):
         try:
             completion = client.chat.completions.create(
                 model=MODEL_NAME,
@@ -119,16 +120,12 @@ def get_agent_action(client: OpenAI, obs: Dict, step: int, last_reward: float, h
                 temperature=TEMPERATURE,
                 max_tokens=MAX_TOKENS,
             )
-
             text = (completion.choices[0].message.content or "").strip()
             text = text.replace("```json", "").replace("```", "").strip()
-
             return json.loads(text)
-
         except Exception as e:
             print(f"[DEBUG] retrying model call: {e}", flush=True)
             time.sleep(1)
-
     return _heuristic_action(obs)
 
 #Simple fallback: vaccinate the most infected state.
@@ -234,22 +231,30 @@ def wait_for_env(timeout: int=60):
 
 def main():
     if not API_KEY:
-        raise ValueError("Set HF_TOKEN or OPENAI_API_KEY environment variable.")
-    client=OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        print("[WARN] No API key found. Using heuristic policy.", flush=True)
+        client = None
+    else:
+        try:
+            client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        except Exception as e:
+            print(f"[WARN] Could not create OpenAI client: {e}. Using heuristic policy.", flush=True)
+            client = None
+    
     wait_for_env()
-    results=[]
+    results = []
     for task_id in TASKS:
         print(f"\n{'='*60}", flush=True)
         print(f"[DEBUG] Running {task_id}", flush=True)
-        result=run_task(client, task_id)
+        result = run_task(client, task_id)
         results.append(result)
         time.sleep(1)
-    print("\n"+"="*60, flush=True)
+
+    print("\n" + "=" * 60, flush=True)
     print("[DEBUG] FINAL BASELINE SCORES:", flush=True)
     for r in results:
-        status="PASS" if r["success"] else "FAIL"
+        status = "PASS" if r["success"] else "FAIL"
         print(f"  {status}  {r['task_id']:25s}  score={r['score']:.4f}  steps={r['steps']}", flush=True)
-    overall=sum(r["score"] for r in results)/len(results)
+    overall = sum(r["score"] for r in results) / len(results)
     print(f"\n  Overall average score: {overall:.4f}", flush=True)
 
 if __name__=="__main__":
