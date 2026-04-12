@@ -2,15 +2,15 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-class CityObservation(BaseModel):
+class StateObservation(BaseModel):
     name: str
     population: int
     infected: float=Field(ge=0.0, le=1.0, description="Fraction of population infected")
     vaccinated: float=Field(ge=0.0, le=1.0, description="Fraction vaccinated")
     recovered: float=Field(ge=0.0, le=1.0, description="Fraction recovered")
     in_lockdown: bool
-    healthcare_capacity: float=Field(ge=0.0, description="Healthcare capacity multiplier")
-    resources: float=Field(ge=0.0, description="Resource units allocated to city")
+    healthcare_capastate: float=Field(ge=0.0, description="Healthcare capastate multiplier")
+    resources: float=Field(ge=0.0, description="Resource units allocated to state")
     deaths: int=Field(ge=0, description="Cumulative deaths")
     infection_count: int=Field(ge=0, description="Absolute number currently infected")
 
@@ -19,14 +19,14 @@ class PandemicObservation(BaseModel):
     max_days: int=Field(description="Maximum days in episode")
     total_resources: float=Field(ge=0.0, description="Global resource pool remaining")
     vaccines_available: int=Field(ge=0, description="Vaccine doses remaining")
-    cities: List[CityObservation]
+    states: List[StateObservation]
     done: bool=False
     action_feedback: str=""
     task_description: str=""
 
 class PandemicAction(BaseModel):
     action_type: str=Field(description="One of: allocate_vaccines, set_lockdown, send_resources, no_op")
-    city_index: Optional[int]=Field(default=None,description="0-based index of target city")
+    state_index: Optional[int]=Field(default=None,description="0-based index of target state")
     doses: Optional[int]=Field(default=None,description="Number of vaccine doses to allocate (for allocate_vaccines)")
     enabled: Optional[bool]=Field(default=None,description="True=lockdown on, False=lockdown off (for set_lockdown)")
     amount: Optional[float]=Field(default=None,description="Resource units to send (for send_resources)")

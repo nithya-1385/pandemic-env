@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from env.simulation import PandemicSimulation
-from env.models import (PandemicObservation, PandemicAction, PandemicReward, CityObservation, EpisodeResult)
+from env.models import (PandemicObservation, PandemicAction, PandemicReward, StateObservation, EpisodeResult)
 from tasks.graders import TASKS, GRADERS
 
 app=FastAPI(
@@ -32,14 +32,14 @@ _step_count: int=0
 
 def _sim_to_observation(sim: PandemicSimulation, feedback: str="", done: bool=False) -> PandemicObservation:
     snap=sim.get_state_snapshot()
-    cities_obs=[CityObservation(**c) for c in snap["cities"]]
+    states_obs=[StateObservation(**c) for c in snap["states"]]
     task=TASKS[_current_task_id]
     return PandemicObservation(
         day=snap["day"],
         max_days=sim.max_days,
         total_resources=snap["total_resources"],
         vaccines_available=snap["vaccines_available"],
-        cities=cities_obs,
+        states=states_obs,
         done=done,
         action_feedback=feedback,
         task_description=task["description"],
@@ -146,9 +146,9 @@ def step(req: StepRequest):
             "final_score": grade["score"],
             "total_reward": round(_total_reward, 4),
             "days_survived": _sim.day,
-            "total_deaths": sum(c.deaths for c in _sim.cities),
-            "avg_infected_final": round(sum(c.infected for c in _sim.cities)/len(_sim.cities), 4),
-            "avg_vaccinated_final": round(sum(c.vaccinated for c in _sim.cities)/len(_sim.cities), 4),
+            "total_deaths": sum(c.deaths for c in _sim.states),
+            "avg_infected_final": round(sum(c.infected for c in _sim.states)/len(_sim.states), 4),
+            "avg_vaccinated_final": round(sum(c.vaccinated for c in _sim.states)/len(_sim.states), 4),
             "success": grade["success"],
         }
     return StepResponse(observation=obs, reward=reward, done=done, info=info)
@@ -174,4 +174,4 @@ def grade():
 if __name__=="__main__":
     import uvicorn
     port=int(os.environ.get("PORT", 7860))
-    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)

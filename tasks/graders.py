@@ -9,7 +9,7 @@ from env.simulation import PandemicSimulation
 TASKS = {
     "task_1_easy": {
         "id": "task_1_easy",
-        "name": "Single City Outbreak Control",
+        "name": "Single State Outbreak Control",
         "difficulty": "easy",
         "description": (
             "A mild outbreak is spreading in Metropolis (population 5M). "
@@ -21,10 +21,10 @@ TASKS = {
     },
     "task_2_medium": {
         "id": "task_2_medium",
-        "name": "Multi-City Epidemic Management",
+        "name": "Multi-State Epidemic Management",
         "difficulty": "medium",
         "description": (
-            "A growing epidemic is spreading across 3 connected cities. "
+            "A growing epidemic is spreading across 3 connected states. "
             "You have 40 days, 350 resource units, and 200,000 vaccine doses. "
             "Goal: Contain spread to under 3% average infection and vaccinate at least 40% of the population."
         ),
@@ -36,10 +36,10 @@ TASKS = {
         "name": "National Pandemic Crisis",
         "difficulty": "hard",
         "description": (
-            "A severe pandemic is ravaging all 5 cities simultaneously. "
+            "A severe pandemic is ravaging all 5 states simultaneously. "
             "Resources are critically scarce. You have 50 days, only 200 resource units, "
             "and 100,000 vaccine doses. Goal: Prevent systemic collapse — keep deaths below "
-            "50,000 and at least one city below 10% infection."
+            "50,000 and at least one state below 10% infection."
         ),
         "success_threshold": 0.5,
         "max_days": 50,
@@ -48,15 +48,15 @@ TASKS = {
 
 
 def grade_task_1(sim: PandemicSimulation) -> Dict[str, Any]:
-    """Easy grader: single city infection + death control."""
-    city = sim.cities[0]
-    avg_infected = city.infected
-    total_deaths = city.deaths
+    """Easy grader: single state infection + death control."""
+    state = sim.states[0]
+    avg_infected = state.infected
+    total_deaths = state.deaths
 
     # Score components
     infection_score = max(0.0, 1.0 - avg_infected / 0.10)      # 0 if >=10% infected
     death_score = max(0.0, 1.0 - total_deaths / 10_000)         # 0 if >=10k deaths
-    vax_score = min(1.0, city.vaccinated / 0.30)                 # full score at 30% vax
+    vax_score = min(1.0, state.vaccinated / 0.30)                 # full score at 30% vax
     speed_bonus = max(0.0, (sim.max_days - sim.day) / sim.max_days) * 0.1
 
     score = (
@@ -82,15 +82,15 @@ def grade_task_1(sim: PandemicSimulation) -> Dict[str, Any]:
 
 
 def grade_task_2(sim: PandemicSimulation) -> Dict[str, Any]:
-    """Medium grader: multi-city spread containment + vaccination."""
-    avg_infected = sum(c.infected for c in sim.cities) / len(sim.cities)
-    avg_vaccinated = sum(c.vaccinated for c in sim.cities) / len(sim.cities)
-    total_deaths = sum(c.deaths for c in sim.cities)
-    cities_contained = sum(1 for c in sim.cities if c.infected < 0.03)
+    """Medium grader: multi-state spread containment + vaccination."""
+    avg_infected = sum(c.infected for c in sim.states) / len(sim.states)
+    avg_vaccinated = sum(c.vaccinated for c in sim.states) / len(sim.states)
+    total_deaths = sum(c.deaths for c in sim.states)
+    states_contained = sum(1 for c in sim.states if c.infected < 0.03)
 
     infection_score = max(0.0, 1.0 - avg_infected / 0.15)
     vax_score = min(1.0, avg_vaccinated / 0.40)
-    containment_score = cities_contained / len(sim.cities)
+    containment_score = states_contained / len(sim.states)
     death_score = max(0.0, 1.0 - total_deaths / 30_000)
 
     score = (
@@ -111,7 +111,7 @@ def grade_task_2(sim: PandemicSimulation) -> Dict[str, Any]:
             "death_score": round(death_score, 4),
             "avg_infected_pct": round(avg_infected * 100, 2),
             "avg_vaccinated_pct": round(avg_vaccinated * 100, 2),
-            "cities_contained": cities_contained,
+            "states_contained": states_contained,
             "total_deaths": total_deaths,
         }
     }
@@ -119,15 +119,15 @@ def grade_task_2(sim: PandemicSimulation) -> Dict[str, Any]:
 
 def grade_task_3(sim: PandemicSimulation) -> Dict[str, Any]:
     """Hard grader: prevent national collapse under severe resource constraints."""
-    total_deaths = sum(c.deaths for c in sim.cities)
-    max_infected = max(c.infected for c in sim.cities)
-    min_infected = min(c.infected for c in sim.cities)
-    avg_infected = sum(c.infected for c in sim.cities) / len(sim.cities)
-    cities_below_10 = sum(1 for c in sim.cities if c.infected < 0.10)
-    collapse = any(c.infected > 0.70 for c in sim.cities)
+    total_deaths = sum(c.deaths for c in sim.states)
+    max_infected = max(c.infected for c in sim.states)
+    min_infected = min(c.infected for c in sim.states)
+    avg_infected = sum(c.infected for c in sim.states) / len(sim.states)
+    states_below_10 = sum(1 for c in sim.states if c.infected < 0.10)
+    collapse = any(c.infected > 0.70 for c in sim.states)
 
     death_score = max(0.0, 1.0 - total_deaths / 100_000)
-    survival_score = cities_below_10 / len(sim.cities)
+    survival_score = states_below_10 / len(sim.states)
     collapse_penalty = 0.0 if not collapse else 0.3
     spread_score = max(0.0, 1.0 - avg_infected / 0.40)
 
@@ -148,7 +148,7 @@ def grade_task_3(sim: PandemicSimulation) -> Dict[str, Any]:
             "spread_score": round(spread_score, 4),
             "collapse_penalty": collapse_penalty,
             "total_deaths": total_deaths,
-            "cities_below_10pct": cities_below_10,
+            "states_below_10pct": states_below_10,
             "avg_infected_pct": round(avg_infected * 100, 2),
             "collapse_occurred": collapse,
         }

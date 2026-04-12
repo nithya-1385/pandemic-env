@@ -1,9 +1,12 @@
+sdk: gradio
+tags:
+  - openenv
 name: pandemic-response-v1
 version: "1.0.0"
 description: >
   A real-world pandemic response simulation where an AI agent must allocate
   vaccines, enforce lockdowns, and distribute healthcare resources across
-  a network of cities to contain disease spread and minimize deaths.
+  a network of states to contain disease spread and minimize deaths.
   Models genuine public-health decision-making under resource constraints.
 
 author: pandemic-response-team
@@ -16,13 +19,13 @@ tags:
 
 observation_space:
   type: object
-  description: Current simulation state including city infection levels, resources, and day count
+  description: Current simulation state including state infection levels, resources, and day count
   fields:
     day: "Current simulation day (int)"
     max_days: "Episode length (int)"
     total_resources: "Global resource pool (float)"
     vaccines_available: "Remaining vaccine doses (int)"
-    cities: "List of city observations with infection, vaccination, lockdown status"
+    states: "List of state observations with infection, vaccination, lockdown status"
     done: "Whether episode has ended (bool)"
     action_feedback: "Human-readable feedback from last action (str)"
     task_description: "Description of the current task goal (str)"
@@ -32,14 +35,14 @@ action_space:
   description: Intervention actions the agent can take each day
   actions:
     allocate_vaccines:
-      description: Send vaccine doses to a city
-      params: [city_index (int), doses (int)]
+      description: Send vaccine doses to a state
+      params: [state_index (int), doses (int)]
     set_lockdown:
-      description: Enable or disable lockdown in a city
-      params: [city_index (int), enabled (bool)]
+      description: Enable or disable lockdown in a state
+      params: [state_index (int), enabled (bool)]
     send_resources:
-      description: Send resource units to boost a city's healthcare capacity
-      params: [city_index (int), amount (float)]
+      description: Send resource units to boost a state's healthcare capastate
+      params: [state_index (int), amount (float)]
     no_op:
       description: Take no action this step
       params: []
@@ -53,25 +56,25 @@ reward:
 
 tasks:
   - id: task_1_easy
-    name: Single City Outbreak Control
+    name: Single State Outbreak Control
     difficulty: easy
     max_steps: 30
     success_threshold: 0.6
-    description: Contain a mild outbreak in one city with abundant resources
+    description: Contain a mild outbreak in one state with abundant resources
 
   - id: task_2_medium
-    name: Multi-City Epidemic Management
+    name: Multi-State Epidemic Management
     difficulty: medium
     max_steps: 40
     success_threshold: 0.65
-    description: Manage epidemic spread across 3 connected cities with moderate resources
+    description: Manage epidemic spread across 3 connected states with moderate resources
 
   - id: task_3_hard
     name: National Pandemic Crisis
     difficulty: hard
     max_steps: 50
     success_threshold: 0.5
-    description: Prevent systemic collapse across 5 cities with critically scarce resources
+    description: Prevent systemic collapse across 5 states with critically scarce resources
 
 endpoints:
   reset: POST /reset

@@ -7,10 +7,10 @@ from typing import List, Dict, Any, Optional
 from openai import OpenAI
 
 #Config
-API_BASE_URL=os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
-MODEL_NAME=os.environ.get("MODEL_NAME", "gpt-4o-mini")
-API_KEY=os.environ.get("HF_TOKEN", os.environ.get("OPENAI_API_KEY", ""))
-ENV_BASE_URL=os.environ.get("ENV_BASE_URL", "http://localhost:7860")
+API_BASE_URL=os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME=os.getenv("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
+API_KEY=os.getenv("HF_TOKEN") or os.getenv("OPENAI_API_KEY")
+ENV_BASE_URL=os.getenv("ENV_BASE_URL", "http://localhost:7860")
 
 MAX_STEPS=30
 MAX_TOTAL_REWARD=20.0
@@ -58,28 +58,28 @@ def env_state()->Dict:
 
 #Agent prompt
 SYSTEM_PROMPT="""You are an expert pandemic response coordinator.
-Each day you must choose ONE action to contain disease spread across cities.
+Each day you must choose ONE action to contain disease spread across states.
 
 Available actions:
-1. allocate_vaccines — send vaccine doses to a city
-2. set_lockdown      — enable/disable lockdown in a city  
-3. send_resources    — boost healthcare capacity in a city
+1. allocate_vaccines — send vaccine doses to a state
+2. set_lockdown      — enable/disable lockdown in a state  
+3. send_resources    — boost healthcare capastate in a state
 4. no_op             — take no action
 
 Respond ONLY with a valid JSON object. No explanation, no markdown, just JSON.
 
 Examples:
-{"action_type": "allocate_vaccines", "city_index": 0, "doses": 50000}
-{"action_type": "set_lockdown", "city_index": 1, "enabled": true}
-{"action_type": "send_resources", "city_index": 2, "amount": 50.0}
+{"action_type": "allocate_vaccines", "state_index": 0, "doses": 50000}
+{"action_type": "set_lockdown", "state_index": 1, "enabled": true}
+{"action_type": "send_resources", "state_index": 2, "amount": 50.0}
 {"action_type": "no_op"}
 """
 
 def build_prompt(obs: Dict, step: int, last_reward: float, history: List[str]) -> str:
-    cities=obs.get("cities", [])
-    city_lines=[]
-    for i, c in enumerate(cities):
-        city_lines.append(
+    states=obs.get("states", [])
+    state_lines=[]
+    for i, c in enumerate(states):
+        state_lines.append(
             f"  [{i}] {c['name']}: infected={c['infected']*100:.1f}%  "
             f"vax={c['vaccinated']*100:.1f}%  deaths={c['deaths']:,}  "
             f"lockdown={'YES' if c['in_lockdown'] else 'no'}  resources={c['resources']:.0f}"
@@ -92,8 +92,8 @@ Resources remaining: {obs['total_resources']:.0f}
 Vaccines remaining:  {obs['vaccines_available']:,}
 Last reward: {last_reward:+.4f}
 
-Cities:
-{chr(10).join(city_lines)}
+states:
+{chr(10).join(state_lines)}
 
 Task: {obs.get('task_description', '')}
 Last feedback: {obs.get('action_feedback', '')}
@@ -123,20 +123,20 @@ def get_agent_action(client: OpenAI, obs: Dict, step: int, last_reward: float, h
         #Fallback if model fails
         return _heuristic_action(obs)
 
-#Simple fallback: vaccinate the most infected city.
+#Simple fallback: vaccinate the most infected state.
 def _heuristic_action(obs: Dict)->Dict:
-    cities=obs.get("cities", [])
-    if not cities:
+    states=obs.get("states", [])
+    if not states:
         return {"action_type": "no_op"}
-    most_infected=max(range(len(cities)), key=lambda i: cities[i]["infected"])
+    most_infected=max(range(len(states)), key=lambda i: states[i]["infected"])
     vaccines=obs.get("vaccines_available", 0)
     if vaccines > 10000:
-        return {"action_type": "allocate_vaccines", "city_index": most_infected, "doses": min(50000, vaccines)}
+        return {"action_type": "allocate_vaccines", "state_index": most_infected, "doses": min(50000, vaccines)}
     resources=obs.get("total_resources", 0)
     if resources > 20:
-        return {"action_type": "send_resources", "city_index": most_infected, "amount": min(30.0, resources)}
-    if cities[most_infected]["infected"] > 0.10 and not cities[most_infected]["in_lockdown"]:
-        return {"action_type": "set_lockdown", "city_index": most_infected, "enabled": True}
+        return {"action_type": "send_resources", "state_index": most_infected, "amount": min(30.0, resources)}
+    if states[most_infected]["infected"] > 0.10 and not states[most_infected]["in_lockdown"]:
+        return {"action_type": "set_lockdown", "state_index": most_infected, "enabled": True}
     return {"action_type": "no_op"}
 
 

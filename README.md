@@ -1,6 +1,6 @@
 # 🦠 Pandemic Response Environment
 
-An **OpenEnv-compliant** reinforcement learning environment where an AI agent acts as a pandemic response coordinator — allocating vaccines, enforcing lockdowns, and routing healthcare resources across a network of cities to contain disease spread and minimize deaths.
+An **OpenEnv-compliant** reinforcement learning environment where an AI agent acts as a pandemic response coordinator — allocating vaccines, enforcing lockdowns, and routing healthcare resources across a network of states to contain disease spread and minimize deaths.
 
 > **Real-world motivation:** Public health agencies face exactly this resource allocation problem. This environment models the core trade-offs: lockdowns slow spread but cost resources; vaccines provide lasting immunity but are scarce; healthcare investment reduces death rates but requires time to deploy.
 
@@ -11,13 +11,16 @@ An **OpenEnv-compliant** reinforcement learning environment where an AI agent ac
 ```
 pandemic-env/
 ├── env/
-│   ├── simulation.py     # SIR-based disease spread engine
-│   └── models.py         # Pydantic typed models (Observation, Action, Reward)
+│ ├── simulation.py  # SIR-based disease spread engine
+│ └── models.py      # Pydantic typed models (Observation, Action, Reward)
 ├── tasks/
-│   └── graders.py        # 3 tasks with deterministic graders
-├── server.py             # FastAPI OpenEnv-compliant server
-├── inference.py          # Baseline LLM agent script
-├── openenv.yaml          # OpenEnv metadata
+│ └── graders.py     # 3 tasks with deterministic graders
+├── server.py        # FastAPI OpenEnv-compliant server
+├── server/
+│ └── app.py         # OpenEnv entrypoint
+├── inference.py     # Baseline LLM agent script
+├── openenv.yaml     # OpenEnv metadata
+├── pyproject.toml
 ├── requirements.txt
 ├── Dockerfile
 └── README.md
@@ -27,21 +30,21 @@ pandemic-env/
 
 ## 🌍 Environment Description
 
-The simulation runs a modified **SIR (Susceptible-Infected-Recovered)** model across a network of cities connected by travel routes. Each day:
+The simulation runs a modified **SIR (Susceptible-Infected-Recovered)** model across a network of States connected by travel routes. Each day:
 
-1. Disease spreads within cities (R0 = 2.5, modified by lockdowns and vaccination)
-2. Disease spreads between connected cities via travel
-3. Deaths accumulate based on infection level vs. healthcare capacity
+1. Disease spreads within states (R0 = 2.5, modified by lockdowns and vaccination)
+2. Disease spreads between connected states via travel
+3. Deaths accumulate based on infection level vs. healthcare capastate
 4. The agent takes one action (vaccine allocation, lockdown, resource dispatch, or no-op)
 
-### Cities
-| City | Population |
+### States
+| States | Population |
 |------|-----------|
-| Metropolis | 5,000,000 |
-| Harbortown | 1,200,000 |
-| Riverdale | 800,000 |
-| Northport | 600,000 |
-| Eastbridge | 400,000 |
+| Karnataka | 5,000,000 |
+| Maharashtra | 1,200,000 |
+| Tamil_Nadu | 800,000 |
+| Gujarat | 600,000 |
+| Odisha | 400,000 |
 
 ---
 
@@ -53,15 +56,15 @@ The simulation runs a modified **SIR (Susceptible-Infected-Recovered)** model ac
   "max_days": 30,
   "total_resources": 420.0,
   "vaccines_available": 250000,
-  "cities": [
+  "states": [
     {
-      "name": "Metropolis",
+      "name": "Karnataka",
       "population": 5000000,
       "infected": 0.032,
       "vaccinated": 0.15,
       "recovered": 0.04,
       "in_lockdown": false,
-      "healthcare_capacity": 1.0,
+      "healthcare_capastate": 1.0,
       "resources": 100.0,
       "deaths": 1200,
       "infection_count": 160000
@@ -69,7 +72,7 @@ The simulation runs a modified **SIR (Susceptible-Infected-Recovered)** model ac
   ],
   "done": false,
   "action_feedback": "Vaccinated 50000 people in Metropolis",
-  "task_description": "Contain a mild outbreak in one city..."
+  "task_description": "Contain a mild outbreak in one state..."
 }
 ```
 
@@ -79,43 +82,43 @@ The simulation runs a modified **SIR (Susceptible-Infected-Recovered)** model ac
 
 | Action | Parameters | Description |
 |--------|-----------|-------------|
-| `allocate_vaccines` | `city_index`, `doses` | Send vaccine doses to a city |
-| `set_lockdown` | `city_index`, `enabled` | Enable/disable lockdown (costs 10 resources) |
-| `send_resources` | `city_index`, `amount` | Boost city's healthcare capacity |
+| `allocate_vaccines` | `state_index`, `doses` | Send vaccine doses to a state |
+| `set_lockdown` | `state_index`, `enabled` | Enable/disable lockdown (costs 10 resources) |
+| `send_resources` | `state_index`, `amount` | Boost states's healthcare capastate |
 | `no_op` | — | Take no action |
 
 **Example action:**
 ```json
-{"action_type": "allocate_vaccines", "city_index": 0, "doses": 50000}
+{"action_type": "allocate_vaccines", "state_index": 0, "doses": 50000}
 ```
 
 ---
 
 ## 🏆 Tasks
 
-### Task 1 — Easy: Single City Outbreak Control
-- **Cities:** 1 (Metropolis only)
+### Task 1 — Easy: Single State Outbreak Control
+- **states:** 1 (Karnataka only)
 - **Duration:** 30 days
 - **Resources:** 500 units | **Vaccines:** 300,000 doses
 - **Goal:** Keep infection below 5%, deaths below 5,000
 - **Success threshold:** Score ≥ 0.60
 - **Grader:** Weighted combination of infection rate, death count, vaccination coverage, and speed bonus
 
-### Task 2 — Medium: Multi-City Epidemic Management
-- **Cities:** 3 (Metropolis, Harbortown, Riverdale)
+### Task 2 — Medium: Multi-State Epidemic Management
+- **states:** 3 (Karnataka, Maharashtra, Tamil_Nadu)
 - **Duration:** 40 days
 - **Resources:** 350 units | **Vaccines:** 200,000 doses
 - **Goal:** Average infection < 3%, vaccinate ≥ 40% of population
 - **Success threshold:** Score ≥ 0.65
-- **Grader:** Infection containment, vaccination rate, per-city containment, total deaths
+- **Grader:** Infection containment, vaccination rate, per-state containment, total deaths
 
 ### Task 3 — Hard: National Pandemic Crisis
-- **Cities:** All 5 (severe outbreak, 3× initial infections)
+- **states:** All 5 (severe outbreak, 3× initial infections)
 - **Duration:** 50 days
 - **Resources:** 200 units (critically scarce) | **Vaccines:** 100,000 doses
-- **Goal:** Prevent systemic collapse — deaths < 50,000, ≥1 city below 10% infected
+- **Goal:** Prevent systemic collapse — deaths < 50,000, ≥1 state below 10% infected
 - **Success threshold:** Score ≥ 0.50
-- **Grader:** Death toll, cities below threshold, spread control, collapse penalty
+- **Grader:** Death toll, states below threshold, spread control, collapse penalty
 
 ---
 

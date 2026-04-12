@@ -1,0 +1,16 @@
+version = 1
+revision = 1
+
+[[package]]
+name = "pandemic-response-env"
+version = "1.0.0"
+source = { virtual = "." }
+dependencies = [
+  { name = "fastapi" },
+  { name = "uvicorn" },
+  { name = "pydantic" },
+  { name = "requests" },
+  { name = "openai" },
+  { name = "pyyaml" },
+  { name = "openenv-core" },
+]
